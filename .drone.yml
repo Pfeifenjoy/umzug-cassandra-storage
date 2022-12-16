@@ -1,0 +1,68 @@
+---
+
+kind: pipeline
+type: docker
+name: build
+
+steps:
+  - name: install
+    image: node
+    commands:
+      - npm i
+
+  - name: test
+    image: node
+    commands:
+      - sleep 200
+      - npm test
+    environment:
+      CASSANDRA_HOST: cassandra
+
+  - name: build
+    image: node
+    commands:
+      - npm run build
+
+
+services:
+  - name: cassandra
+    image: cassandra
+
+trigger:
+  event:
+    - push
+
+---
+
+kind: pipeline
+type: docker
+name: deploy
+
+steps:
+  - name: install
+    image: node
+    commands:
+      - npm i
+
+  - name: build
+    image: node
+    commands:
+      - npm run build
+
+  - name: publish
+    image: node
+    commands:
+      - echo "//registry.npmjs.org/:_authToken=$${NPM_TOKEN}" > ~/.npmrc
+      - npm whoami
+      - npm publish --access public
+    environment:
+      NPM_TOKEN:
+        from_secret: npm_token
+    when:
+      branch: master
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
