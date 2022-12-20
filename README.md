@@ -9,6 +9,12 @@ This is an [Umzug](https://github.com/sequelize/umzug) storage for storing migra
 
 ```
 import { CassandraStorage } from "@arwed/umzug-cassandra-storage"
+import { Client } from "cassandra-driver"
 
-const umzug = new Umzug({ storage: new CustomStorage(...), logger: console })
+const client = new Client({
+    contactPoints: [ "localhost" ],
+    localDataCenter: "datacenter1"
+})
+
+const umzug = new Umzug({ storage: new CassandraStorage(client), logger: console })
 ```
