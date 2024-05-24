@@ -4,7 +4,6 @@
 
 This is an [Umzug](https://github.com/sequelize/umzug) storage for storing migrations in cassandra.
 
-
 ## Usage
 
 ```
