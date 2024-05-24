@@ -1,5 +1,6 @@
 import { UmzugStorage, MigrationParams } from "umzug"
 import { Client } from "cassandra-driver"
+import { Logger } from "./logger"
 
 const CREATE_KEYSPACE = (keyspace: string) => `
 CREATE KEYSPACE IF NOT EXISTS ${keyspace}
@@ -30,44 +31,70 @@ const LIST_MIGRATIONS = (keyspace: string) => `
 SELECT * FROM ${keyspace}.migrations;
 `
 
+export type CassandraStorageProps = {
+	logger?: Logger
+	keyspace?: string
+}
+
 export class CassandraStorage<T> implements UmzugStorage<T> {
 	client: Client
+	logger: Logger
 	keyspace: string
 	_synced = false
 
-	constructor(client: Client, keyspace = "migrations") {
+	constructor(
+		client: Client,
+		{ logger, keyspace }: CassandraStorageProps = {}
+	) {
 		this.client = client
-		this.keyspace = keyspace
+		this.keyspace = keyspace ?? "migrations"
+		this.logger = logger ?? console
 	}
 
 	async sync() {
+		this.logger.debug("sync called")
 		if (this._synced) return
 
-		await this.client.execute(CREATE_KEYSPACE(this.keyspace))
+		this.logger.info("executing create keyspace")
+		const createKeyspaceQuery = CREATE_KEYSPACE(this.keyspace)
+		this.logger.debug(`Query: ${createKeyspaceQuery}`)
+		await this.client.execute(createKeyspaceQuery)
 
-		await this.client.execute(CREATE_TABLE(this.keyspace))
+		this.logger.info("executing create migrations table")
+		const createTableQuery = CREATE_TABLE(this.keyspace)
+		this.logger.debug(`Query: ${createTableQuery}`)
+		await this.client.execute(createTableQuery)
 
 		this._synced = true
 	}
 
 	async logMigration({ name }: MigrationParams<T>) {
+		this.logger.info(`log migration: ${name}`)
 		await this.sync()
-		await this.client.execute(LOG_MIGRATION(this.keyspace), {
+		const query = LOG_MIGRATION(this.keyspace)
+		this.logger.debug(`Query: ${query}`)
+		await this.client.execute(query, {
 			name,
 			created_at: new Date()
 		})
 	}
 
 	async unlogMigration({ name }: MigrationParams<T>) {
+		this.logger.info(`unlog migration: ${name}`)
 		await this.sync()
-		await this.client.execute(UNLOG_MIGRATION(this.keyspace), {
+		const query = UNLOG_MIGRATION(this.keyspace)
+		this.logger.debug(`Query: ${query}`)
+		await this.client.execute(query, {
 			name
 		})
 	}
 
 	async executed(): Promise<string[]> {
+		this.logger.info("executed")
 		await this.sync()
-		const result = await this.client.execute(LIST_MIGRATIONS(this.keyspace))
+		const query = LIST_MIGRATIONS(this.keyspace)
+		this.logger.debug(`Query: ${query}`)
+		const result = await this.client.execute(query)
 		return result.rows.map(row => row.get("name"))
 	}
 }
