@@ -1,73 +1,62 @@
 ---
 kind: pipeline
-type: docker
-name: build
-
-steps:
-    - name: install
-      image: node
-      commands:
-          - npm i
-
-    - name: test
-      image: node
-      commands:
-          - sleep 200
-          - npm test
-      environment:
-          CASSANDRA_HOST: cassandra
-
-    - name: build
-      image: node
-      commands:
-          - npm run build
-
-    - name: slack
-      image: plugins/slack
-      settings:
-          webhook:
-              from_secret: slack_webhook
-          channel: developers
-          username: drone
-
-services:
-    - name: cassandra
-      image: cassandra
-
-trigger:
-    event:
-        - push
-
----
-kind: pipeline
-type: docker
 name: deploy
 
 steps:
+    - name: login
+      image: node
+      commands:
+          - echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+      environment:
+          NPM_TOKEN:
+              from_secret: npm_token
+      volumes:
+          - name: npmrc
+            path: /root/
+
     - name: install
       image: node
       commands:
           - npm i
+      volumes:
+          - name: npmrc
+            path: /root/
 
     - name: build
       image: node
       commands:
-          - npm run build
+          - sleep 200
+          - npm run release
+      volumes:
+          - name: npmrc
+            path: /root/
+      environment:
+          CASSANDRA_HOST: cassandra
 
     - name: publish
       image: node
       commands:
-          - echo "//registry.npmjs.org/:_authToken=$${NPM_TOKEN}" > ~/.npmrc
-          - npm whoami
           - npm publish --access public
-      environment:
-          NPM_TOKEN:
-              from_secret: npm_token
       when:
-          branch: master
+          event:
+              - tag
+      volumes:
+          - name: npmrc
+            path: /root/
 
 trigger:
     event:
-        - promote
-    target:
-        - production
+        - push
+        - tag
+
+volumes:
+    - name: npmrc
+      temp: {}
+
+secrets:
+    - source: npm_token
+      target: NPM_TOKEN
+
+services:
+    - name: cassandra
+      image: cassandra

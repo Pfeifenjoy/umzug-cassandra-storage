@@ -13,7 +13,8 @@
 		"format": "npx prettier --write .",
 		"test:lint": "npx prettier --check .",
 		"test:unit": "mocha --require ts-node/register test/**/*.ts",
-		"test": "npm run test:lint && npm run test:unit"
+		"test": "npm run test:lint && npm run test:unit",
+		"release": "npm run clean && npm run test && npm run build"
 	},
 	"keywords": [
 		"umzug",
