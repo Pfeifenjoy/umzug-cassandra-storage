@@ -66,6 +66,7 @@ export class CassandraStorage<T> implements UmzugStorage<T> {
 		await this.client.execute(createTableQuery)
 
 		this._synced = true
+		this.logger.debug("finished sync")
 	}
 
 	async logMigration({ name }: MigrationParams<T>) {
@@ -77,6 +78,7 @@ export class CassandraStorage<T> implements UmzugStorage<T> {
 			name,
 			created_at: new Date()
 		})
+		this.logger.debug("finished log migration")
 	}
 
 	async unlogMigration({ name }: MigrationParams<T>) {
@@ -87,6 +89,7 @@ export class CassandraStorage<T> implements UmzugStorage<T> {
 		await this.client.execute(query, {
 			name
 		})
+		this.logger.debug("finished unlog migration")
 	}
 
 	async executed(): Promise<string[]> {
@@ -95,6 +98,7 @@ export class CassandraStorage<T> implements UmzugStorage<T> {
 		const query = LIST_MIGRATIONS(this.keyspace)
 		this.logger.debug(`Query: ${query}`)
 		const result = await this.client.execute(query)
+		this.logger.debug("finished executed")
 		return result.rows.map(row => row.get("name"))
 	}
 }
