@@ -55,12 +55,12 @@ export class CassandraStorage<T> implements UmzugStorage<T> {
 		this.logger.debug("sync called")
 		if (this._synced) return
 
-		this.logger.info("executing create keyspace")
+		this.logger.debug("executing create keyspace")
 		const createKeyspaceQuery = CREATE_KEYSPACE(this.keyspace)
 		this.logger.debug(`Query: ${createKeyspaceQuery}`)
 		await this.client.execute(createKeyspaceQuery)
 
-		this.logger.info("executing create migrations table")
+		this.logger.debug("executing create migrations table")
 		const createTableQuery = CREATE_TABLE(this.keyspace)
 		this.logger.debug(`Query: ${createTableQuery}`)
 		await this.client.execute(createTableQuery)
@@ -93,7 +93,7 @@ export class CassandraStorage<T> implements UmzugStorage<T> {
 	}
 
 	async executed(): Promise<string[]> {
-		this.logger.info("executed")
+		this.logger.debug("executed")
 		await this.sync()
 		const query = LIST_MIGRATIONS(this.keyspace)
 		this.logger.debug(`Query: ${query}`)
